@@ -12,6 +12,7 @@
 	"author": "Yash Singh",
 	"license": "ISC",
 	"dependencies": {
+		"ably": "^1.2.5-beta.1",
 		"bcryptjs": "^2.4.3",
 		"cloudinary": "^1.40.0",
 		"cookie-parser": "^1.4.6",
