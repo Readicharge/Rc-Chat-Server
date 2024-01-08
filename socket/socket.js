@@ -10,7 +10,9 @@ export const getRecipientSocketId = (recipientId) => {
 
 const userSocketMap = {}; // userId: socketId
 
-const channel = ably.channels.get("general");
+const channel = ably.channels.get("channel1");
+
+console.log(channel)
 
 channel.subscribe("markMessagesAsSeen", async ({ conversationId, userId }) => {
 	try {
