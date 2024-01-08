@@ -1,5 +1,6 @@
 import Conversation from "../models/conversationModel.js";
 import Message from "../models/messageModel.js";
+import User from "../models/userModel.js";
 import { ably } from "../socket/socket.js";
 import { v2 as cloudinary } from "cloudinary";
 
@@ -83,14 +84,15 @@ async function getMessages(req, res) {
 async function connectWithAdmin(req, res) {
 	try {
 		const { userId, adminId } = req.body;
+		var adminIdNew = "";
 		if (adminId === undefined || adminId=== null) {
 			// We will assign one Admin to the User 
 			const suitableAdmin = await User.find({ user_type: "user" });
 			// Here we will get the list of users, out of which we have to select one
 			// But for now We are not focusing on the algorithm behind this as we have not discussed this part yet with Brian 
 
-			adminId = suitableAdmin[0]._id;
-			res.status(201).json({adminId:adminId});
+			adminIdNew = suitableAdmin[0]._id;
+			res.status(201).json({adminId:adminIdNew});
 		}
 		else
 		{
