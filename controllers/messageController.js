@@ -84,6 +84,7 @@ async function getMessages(req, res) {
 async function connectWithAdmin(req, res) {
 	try {
 		const { userId, adminId } = req.body;
+		console.log(userId, adminId);
 		var adminIdNew = "";
 		if (adminId === undefined || adminId=== null) {
 			// We will assign one Admin to the User 
@@ -96,6 +97,7 @@ async function connectWithAdmin(req, res) {
 		}
 		else
 		{
+			
 			const conversation = await Conversation.findOne({
 				participants: { $all: [userId, adminId] },
 			});
