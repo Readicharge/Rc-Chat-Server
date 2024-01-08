@@ -1,17 +1,8 @@
-import { Server as SocketIOServer } from "socket.io";
-import http from "http";
-import express from "express";
+import Ably from "ably";
 import Message from "../models/messageModel.js";
 import Conversation from "../models/conversationModel.js";
 
-const app = express();
-const server = http.createServer(app);
-const io = new SocketIOServer(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
-});
+const ably = new Ably.Realtime("RiBQGw.vcnBXw:I1tNRwt-47uXrwOcHbs-koOfWDUub9whWEcWWBsPk7A");
 
 export const getRecipientSocketId = (recipientId) => {
 	return userSocketMap[recipientId];
@@ -19,28 +10,28 @@ export const getRecipientSocketId = (recipientId) => {
 
 const userSocketMap = {}; // userId: socketId
 
-io.on("connection", (socket) => {
-	console.log("User connected", socket.id);
-	const userId = socket.handshake.query.userId;
+const channel = ably.channels.get("channel1");
 
-	if (userId !== "undefined") userSocketMap[userId] = socket.id;
-	io.emit("getOnlineUsers", Object.keys(userSocketMap));
+console.log(channel)
 
-	socket.on("markMessagesAsSeen", async ({ conversationId, userId }) => {
-		try {
-			await Message.updateMany({ conversationId, seen: false }, { $set: { seen: true } });
-			await Conversation.updateOne({ _id: conversationId }, { $set: { "lastMessage.seen": true } });
-			io.to(userSocketMap[userId]).emit("messagesSeen", { conversationId });
-		} catch (error) {
-			console.log(error);
+channel.subscribe("markMessagesAsSeen", async ({ conversationId, userId }) => {
+	try {
+		await Message.updateMany(
+			{ conversationId: conversationId, seen: false },
+			{ $set: { seen: true } }
+		);
+		await Conversation.updateOne(
+			{ _id: conversationId },
+			{ $set: { "lastMessage.seen": true } }
+		);
+		if (userSocketMap[userId]) {
+			// Check if user is online
+			// Emit event to specific user using their Socket.IO socketId or Ably channel
+			channel.publish(userSocketMap[userId], "messagesSeen", { conversationId });
 		}
-	});
-
-	socket.on("disconnect", () => {
-		console.log("User disconnected");
-		delete userSocketMap[userId];
-		io.emit("getOnlineUsers", Object.keys(userSocketMap));
-	});
+	} catch (error) {
+		console.log(error);
+	}
 });
 
-export { io, server, app };
+export { ably };
