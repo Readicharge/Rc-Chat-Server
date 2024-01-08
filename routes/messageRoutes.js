@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.get("/conversations", protectRoute, getConversations);
 router.get("/:otherUserId", protectRoute, getMessages);
-router.get("/connectWithAdmin",protectRoute,connectWithAdmin)
+router.post("/connectWithAdmin",protectRoute,connectWithAdmin)
 router.post("/", protectRoute, sendMessage);
 
 export default router;
