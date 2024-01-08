@@ -1,6 +1,5 @@
 import Post from "../models/postModel.js";
 import User from "../models/userModel.js";
-import { ably } from "../socket/socket.js"; // Assuming ably is imported for real-time functionality
 import { v2 as cloudinary } from "cloudinary";
 
 const createPost = async (req, res) => {
@@ -33,10 +32,6 @@ const createPost = async (req, res) => {
 
 		const newPost = new Post({ postedBy, text, img });
 		await newPost.save();
-
-		// Publish new post to Ably channel
-		const channel = ably.channels.get("posts");
-		channel.publish("newPost", { newPost });
 
 		res.status(201).json(newPost);
 	} catch (err) {
@@ -77,10 +72,6 @@ const deletePost = async (req, res) => {
 
 		await Post.findByIdAndDelete(req.params.id);
 
-		// Publish deleted post to Ably channel
-		const channel = ably.channels.get("posts");
-		channel.publish("deletePost", { postId: req.params.id });
-
 		res.status(200).json({ message: "Post deleted successfully" });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
@@ -101,21 +92,13 @@ const likeUnlikePost = async (req, res) => {
 		const userLikedPost = post.likes.includes(userId);
 
 		if (userLikedPost) {
+			// Unlike post
 			await Post.updateOne({ _id: postId }, { $pull: { likes: userId } });
-
-			// Publish post update to Ably channel
-			const channel = ably.channels.get("posts");
-			channel.publish("updatePost", { postId, action: "unlike" });
-
 			res.status(200).json({ message: "Post unliked successfully" });
 		} else {
+			// Like post
 			post.likes.push(userId);
 			await post.save();
-
-			// Publish post update to Ably channel
-			const channel = ably.channels.get("posts");
-			channel.publish("updatePost", { postId, action: "like" });
-
 			res.status(200).json({ message: "Post liked successfully" });
 		}
 	} catch (err) {
@@ -144,10 +127,6 @@ const replyToPost = async (req, res) => {
 
 		post.replies.push(reply);
 		await post.save();
-
-		// Publish reply to Ably channel
-		const channel = ably.channels.get("posts");
-		channel.publish("newReply", { postId, reply });
 
 		res.status(200).json(reply);
 	} catch (err) {

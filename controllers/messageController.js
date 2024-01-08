@@ -1,8 +1,8 @@
 import Conversation from "../models/conversationModel.js";
 import Message from "../models/messageModel.js";
-import User from "../models/userModel.js";
-import { ably } from "../socket/socket.js";
+import { getRecipientSocketId, io } from "../socket/socket.js";
 import { v2 as cloudinary } from "cloudinary";
+import User from "../models/userModel.js";
 
 async function sendMessage(req, res) {
 	try {
@@ -47,9 +47,10 @@ async function sendMessage(req, res) {
 			}),
 		]);
 
-		// Publish an event to the 'markMessagesAsSeen' Ably channel
-		const channel = ably.channels.get("general");
-		channel.publish("markMessagesAsSeen", { conversationId: conversation._id, userId: senderId });
+		const recipientSocketId = getRecipientSocketId(recipientId);
+		if (recipientSocketId) {
+			io.to(recipientSocketId).emit("newMessage", newMessage);
+		}
 
 		res.status(201).json(newMessage);
 	} catch (error) {
@@ -79,6 +80,25 @@ async function getMessages(req, res) {
 	}
 }
 
+async function getConversations(req, res) {
+	const userId = req.user._id;
+	try {
+		const conversations = await Conversation.find({ participants: userId }).populate({
+			path: "participants",
+			select: "username profilePic",
+		});
+
+		// remove the current user from the participants array
+		conversations.forEach((conversation) => {
+			conversation.participants = conversation.participants.filter(
+				(participant) => participant._id.toString() !== userId.toString()
+			);
+		});
+		res.status(200).json(conversations);
+	} catch (error) {
+		res.status(500).json({ error: error.message });
+	}
+}
 
 
 async function connectWithAdmin(req, res) {
@@ -119,24 +139,6 @@ async function connectWithAdmin(req, res) {
 	}
 }
 
-async function getConversations(req, res) {
-	const userId = req.user._id;
-	try {
-		const conversations = await Conversation.find({ participants: userId }).populate({
-			path: "participants",
-			select: "username profilePic",
-		});
 
-		// remove the current user from the participants array
-		conversations.forEach((conversation) => {
-			conversation.participants = conversation.participants.filter(
-				(participant) => participant._id.toString() !== userId.toString()
-			);
-		});
-		res.status(200).json(conversations);
-	} catch (error) {
-		res.status(500).json({ error: error.message });
-	}
-}
 
 export { sendMessage, getMessages, getConversations, connectWithAdmin };

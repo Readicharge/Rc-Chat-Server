@@ -2,7 +2,6 @@ import User from "../models/userModel.js";
 import Post from "../models/postModel.js";
 import bcrypt from "bcryptjs";
 import generateTokenAndSetCookie from "../utils/helpers/generateTokenAndSetCookie.js";
-import { ably } from "../socket/socket.js"; // Assuming ably is imported for real-time functionality
 import { v2 as cloudinary } from "cloudinary";
 import mongoose from "mongoose";
 
@@ -124,8 +123,7 @@ const loginUser = async (req, res) => {
 
 		generateTokenAndSetCookie(user._id, res);
 
-		const channel = ably.channels.get("general");
-		channel.publish("userLoggedIn", { userId: user._id });
+
 
 		res.status(200).json({
 			_id: user._id,
