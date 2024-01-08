@@ -10,3 +10,4 @@ router.post("/connectWithAdmin",protectRoute,connectWithAdmin)
 router.post("/", protectRoute, sendMessage);
 
 export default router;
+ 

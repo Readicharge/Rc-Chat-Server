@@ -83,28 +83,33 @@ async function getMessages(req, res) {
 async function connectWithAdmin(req, res) {
 	try {
 		const { userId, adminId } = req.body;
-		if (adminId === undefined) {
+		if (adminId === undefined || adminId=== null) {
 			// We will assign one Admin to the User 
 			const suitableAdmin = await User.find({ user_type: "user" });
 			// Here we will get the list of users, out of which we have to select one
 			// But for now We are not focusing on the algorithm behind this as we have not discussed this part yet with Brian 
 
 			adminId = suitableAdmin[0]._id;
+			res.status(201).json({adminId:adminId});
+		}
+		else
+		{
+			const conversation = await Conversation.findOne({
+				participants: { $all: [userId, adminId] },
+			});
+	
+			if (!conversation) {
+				return res.status(404).json({ error: "Conversation not found" });
+			}
+	
+			const messages = await Message.find({
+				conversationId: conversation._id,
+			}).sort({ createdAt: 1 });
+	
+			res.status(200).json(messages);
 		}
 
-		const conversation = await Conversation.findOne({
-			participants: { $all: [userId, adminId] },
-		});
-
-		if (!conversation) {
-			return res.status(404).json({ error: "Conversation not found" });
-		}
-
-		const messages = await Message.find({
-			conversationId: conversation._id,
-		}).sort({ createdAt: 1 });
-
-		res.status(200).json(messages);
+		
 	} catch (error) {
 		res.status(500).json({ error: error.message });
 	}
