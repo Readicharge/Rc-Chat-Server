@@ -1,6 +1,6 @@
 import Conversation from "../models/conversationModel.js";
 import Message from "../models/messageModel.js";
-import { getRecipientSocketId, io } from "../socket/socket.js";
+import { ably } from "../socket/socket.js";
 import { v2 as cloudinary } from "cloudinary";
 
 async function sendMessage(req, res) {
@@ -46,10 +46,9 @@ async function sendMessage(req, res) {
 			}),
 		]);
 
-		const recipientSocketId = getRecipientSocketId(recipientId);
-		if (recipientSocketId) {
-			io.to(recipientSocketId).emit("newMessage", newMessage);
-		}
+		// Publish an event to the 'markMessagesAsSeen' Ably channel
+		const channel = ably.channels.get("general");
+		channel.publish("markMessagesAsSeen", { conversationId: conversation._id, userId: senderId });
 
 		res.status(201).json(newMessage);
 	} catch (error) {

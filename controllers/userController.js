@@ -2,22 +2,19 @@ import User from "../models/userModel.js";
 import Post from "../models/postModel.js";
 import bcrypt from "bcryptjs";
 import generateTokenAndSetCookie from "../utils/helpers/generateTokenAndSetCookie.js";
+import { ably } from "../socket/socket.js"; // Assuming ably is imported for real-time functionality
 import { v2 as cloudinary } from "cloudinary";
 import mongoose from "mongoose";
 
 const getUserProfile = async (req, res) => {
-	// We will fetch user profile either with username or userId
-	// query is either username or userId
 	const { query } = req.params;
 
 	try {
 		let user;
 
-		// query is userId
 		if (mongoose.Types.ObjectId.isValid(query)) {
 			user = await User.findOne({ _id: query }).select("-password").select("-updatedAt");
 		} else {
-			// query is username
 			user = await User.findOne({ username: query }).select("-password").select("-updatedAt");
 		}
 
@@ -38,6 +35,7 @@ const signupUser = async (req, res) => {
 		if (user) {
 			return res.status(400).json({ error: "User already exists" });
 		}
+
 		const salt = await bcrypt.genSalt(10);
 		const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -45,7 +43,7 @@ const signupUser = async (req, res) => {
 			name,
 			email,
 			username,
-			user_type:"user",// Here the User Represents the one who log in from the admin end , and in this case the Readicharge tech support will login from here
+			user_type: "user",
 			password: hashedPassword,
 		});
 		await newUser.save();
@@ -70,16 +68,15 @@ const signupUser = async (req, res) => {
 	}
 };
 
-
-
-const createUserFromApp =  async (req,res) => {
+const createUserFromApp = async (req, res) => {
 	try {
-		const { name, email, username, password,user_type } = req.body;
+		const { name, email, username, password, user_type } = req.body;
 		const user = await User.findOne({ $or: [{ email }, { username }] });
 
 		if (user) {
 			return res.status(400).json({ error: "User already exists" });
 		}
+
 		const salt = await bcrypt.genSalt(10);
 		const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -88,7 +85,7 @@ const createUserFromApp =  async (req,res) => {
 			email,
 			username,
 			password: hashedPassword,
-			user_type
+			user_type,
 		});
 		await newUser.save();
 
@@ -96,7 +93,7 @@ const createUserFromApp =  async (req,res) => {
 			generateTokenAndSetCookie(newUser._id, res);
 			res.status(201).json({
 				_id: newUser._id,
-				user_type:newUser.user_type,
+				user_type: newUser.user_type,
 				name: newUser.name,
 				email: newUser.email,
 				username: newUser.username,
@@ -108,9 +105,9 @@ const createUserFromApp =  async (req,res) => {
 		}
 	} catch (err) {
 		res.status(500).json({ error: err.message });
-		console.log("Error in signupUser: ", err.message);
+		console.log("Error in createUserFromApp: ", err.message);
 	}
-}
+};
 
 const loginUser = async (req, res) => {
 	try {
@@ -126,6 +123,9 @@ const loginUser = async (req, res) => {
 		}
 
 		generateTokenAndSetCookie(user._id, res);
+
+		const channel = ably.channels.get("general");
+		channel.publish("userLoggedIn", { userId: user._id });
 
 		res.status(200).json({
 			_id: user._id,
@@ -147,7 +147,7 @@ const logoutUser = (req, res) => {
 		res.status(200).json({ message: "User logged out successfully" });
 	} catch (err) {
 		res.status(500).json({ error: err.message });
-		console.log("Error in signupUser: ", err.message);
+		console.log("Error in logoutUser: ", err.message);
 	}
 };
 
@@ -165,12 +165,10 @@ const followUnFollowUser = async (req, res) => {
 		const isFollowing = currentUser.following.includes(id);
 
 		if (isFollowing) {
-			// Unfollow user
 			await User.findByIdAndUpdate(id, { $pull: { followers: req.user._id } });
 			await User.findByIdAndUpdate(req.user._id, { $pull: { following: id } });
 			res.status(200).json({ message: "User unfollowed successfully" });
 		} else {
-			// Follow user
 			await User.findByIdAndUpdate(id, { $push: { followers: req.user._id } });
 			await User.findByIdAndUpdate(req.user._id, { $push: { following: id } });
 			res.status(200).json({ message: "User followed successfully" });
@@ -216,7 +214,6 @@ const updateUser = async (req, res) => {
 
 		user = await user.save();
 
-		// Find all posts that this user replied and update username and userProfilePic fields
 		await Post.updateMany(
 			{ "replies.userId": userId },
 			{
@@ -228,7 +225,6 @@ const updateUser = async (req, res) => {
 			{ arrayFilters: [{ "reply.userId": userId }] }
 		);
 
-		// password should be null in response
 		user.password = null;
 
 		res.status(200).json(user);
@@ -240,9 +236,7 @@ const updateUser = async (req, res) => {
 
 const getSuggestedUsers = async (req, res) => {
 	try {
-		// exclude the current user from suggested users array and exclude users that current user is already following
 		const userId = req.user._id;
-
 		const usersFollowedByYou = await User.findById(userId).select("following");
 
 		const users = await User.aggregate([
@@ -255,6 +249,7 @@ const getSuggestedUsers = async (req, res) => {
 				$sample: { size: 10 },
 			},
 		]);
+
 		const filteredUsers = users.filter((user) => !usersFollowedByYou.following.includes(user._id));
 		const suggestedUsers = filteredUsers.slice(0, 4);
 
@@ -291,5 +286,5 @@ export {
 	getUserProfile,
 	getSuggestedUsers,
 	freezeAccount,
-	createUserFromApp
+	createUserFromApp,
 };

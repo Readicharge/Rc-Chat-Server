@@ -1,55 +1,35 @@
-import { Server } from "socket.io";
-import http from "http";
-import express from "express";
+import Ably from "ably";
 import Message from "../models/messageModel.js";
 import Conversation from "../models/conversationModel.js";
-import Ably from "ably";
-
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
-});
 
 const ably = new Ably.Realtime("RiBQGw.vcnBXw:I1tNRwt-47uXrwOcHbs-koOfWDUub9whWEcWWBsPk7A");
 
 export const getRecipientSocketId = (recipientId) => {
-  return userSocketMap[recipientId];
+	return userSocketMap[recipientId];
 };
 
 const userSocketMap = {}; // userId: socketId
 
-io.on("connection", (socket) => {
-  console.log("user connected", socket.id);
-  const userId = socket.handshake.query.userId;
+const channel = ably.channels.get("general");
 
-  if (userId != "undefined") userSocketMap[userId] = socket.id;
-
-  const channel = ably.channels.get(userId);
-
-  channel.subscribe("markMessagesAsSeen", async ({ conversationId, userId }) => {
-    try {
-      await Message.updateMany(
-        { conversationId: conversationId, seen: false },
-        { $set: { seen: true } }
-      );
-      await Conversation.updateOne(
-        { _id: conversationId },
-        { $set: { "lastMessage.seen": true } }
-      );
-      io.to(userSocketMap[userId]).emit("messagesSeen", { conversationId });
-    } catch (error) {
-      console.log(error);
-    }
-  });
-
-  socket.on("disconnect", () => {
-    console.log("user disconnected");
-    delete userSocketMap[userId];
-  });
+channel.subscribe("markMessagesAsSeen", async ({ conversationId, userId }) => {
+	try {
+		await Message.updateMany(
+			{ conversationId: conversationId, seen: false },
+			{ $set: { seen: true } }
+		);
+		await Conversation.updateOne(
+			{ _id: conversationId },
+			{ $set: { "lastMessage.seen": true } }
+		);
+		if (userSocketMap[userId]) {
+			// Check if user is online
+			// Emit event to specific user using their Socket.IO socketId or Ably channel
+			channel.publish(userSocketMap[userId], "messagesSeen", { conversationId });
+		}
+	} catch (error) {
+		console.log(error);
+	}
 });
 
-export { io, server, app };
+export { ably };
