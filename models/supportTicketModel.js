@@ -19,10 +19,16 @@ const supportTicketSchema = mongoose.Schema({
         type:String,
         required:true
     },
-    query:{
+    query:[{
+       message:{
         type:String,
         required:true
-    },
+       },
+       commenterId :{
+        type:[mongoose.Schema.Types.ObjectId],
+        required:true
+       }
+    }],
     status:{
         type:String,
         required:true,
