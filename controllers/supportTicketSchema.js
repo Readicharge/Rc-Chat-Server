@@ -43,7 +43,7 @@ const updateSupportTicket = async (req, res) => {
             // If 'query' field exists, update the support ticket to add the query content to the array
             await Support.findByIdAndUpdate(
                 req.params.id,
-                { $push: { query: { $each: req.body.query } } },
+                { $push: { query: req.body.query } },
                 { new: true }
             );
         } else {
@@ -55,9 +55,10 @@ const updateSupportTicket = async (req, res) => {
         res.status(201).json({ data: "Support Ticket Updated Successfully" });
     } catch (error) {
         // Sending the error status
-        res.status(500).json({ data:error.message});
+        res.status(500).json({ data: error.message });
     }
 };
+
 
 
 
