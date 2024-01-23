@@ -55,7 +55,7 @@ const updateSupportTicket = async (req, res) => {
         res.status(201).json({ data: "Support Ticket Updated Successfully" });
     } catch (error) {
         // Sending the error status
-        res.status(500).json({ data: "Error in Updating Support Ticket" });
+        res.status(500).json({ data:error});
     }
 };
 
