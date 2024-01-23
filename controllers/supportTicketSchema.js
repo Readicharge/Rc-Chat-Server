@@ -34,27 +34,31 @@ const createSupportTicket = async (req, res) => {
 }
 
 const updateSupportTicket = async (req, res) => {
-    try{
-        // Getting the fields which needs to be updated 
+    try {
+        // Getting the fields which need to be updated
         const idata = req.body;
 
-        
+        // Check if the request has the 'query' field
+        if (req.body.query) {
+            // If 'query' field exists, update the support ticket to add the query content to the array
+            await Support.findByIdAndUpdate(
+                req.params.id,
+                { $push: { query: req.body.query } },
+                { new: true }
+            );
+        } else {
+            // If 'query' field does not exist, update the support ticket without modifying the 'query' array
+            await Support.findByIdAndUpdate(req.params.id, idata, { new: true });
+        }
 
-        // Getting the support ticket id 
-        const support_ticket_id = req.params.id;
-
-        // Updating the support ticket for the following field
-        await Support.findByIdAndUpdate(support_ticket_id,idata,{new:true});
-
-        // Sending the success status 
-        res.status(201).json({data:"Support Ticket Updated Successfully"});
+        // Sending the success status
+        res.status(201).json({ data: "Support Ticket Updated Successfully" });
+    } catch (error) {
+        // Sending the error status
+        res.status(500).json({ data: "Error in Updating Support Ticket" });
     }
-    catch(error)
-    {
-        // Sending the error status 
-        res.status(201).json({data:"Error in Updating Support Ticket"});
-    }
-}
+};
+
 
 
 
