@@ -43,7 +43,7 @@ const updateSupportTicket = async (req, res) => {
             // If 'query' field exists, update the support ticket to add the query content to the array
             await Support.findByIdAndUpdate(
                 req.params.id,
-                { $push: { query: req.body.query } },
+                { $push: { query: { $each: req.body.query } } },
                 { new: true }
             );
         } else {
