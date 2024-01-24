@@ -28,7 +28,7 @@ const createSupportTicket = async (req, res) => {
    catch(error)
    {
     // Sending the Error Message 
-    res.status(201).json({data:"Error in Creating Support Ticket"});
+    res.status(201).json({data:error});
    }
 
 }
