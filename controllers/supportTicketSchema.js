@@ -75,7 +75,7 @@ const getSupportTickets = async (req, res) => {
         // If there are support tickets avaialable then send the support ticket as the response otherwise send an empty list
         if(support_tickets.length > 0)
         {
-            res.status(200).json({data:support_tickets});
+            res.status(200).json({data:support_tickets,userid:user_id});
         }
         else
         {
