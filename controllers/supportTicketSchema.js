@@ -79,7 +79,7 @@ const getSupportTickets = async (req, res) => {
         }
         else
         {
-            res.status(200).json({data:[]});
+            res.status(200).json({data:[],userId:user_id});
         }
     }
     catch(error)
