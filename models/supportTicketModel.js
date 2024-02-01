@@ -27,8 +27,18 @@ const supportTicketSchema = mongoose.Schema({
        commenterId :{
         type:[mongoose.Schema.Types.ObjectId],
         required:true
+       },
+       jobId:{
+        type:String,
+        required:false
        }
     }],
+    likeDislike:{
+        type:String,
+        required:false,
+        default:"none",
+        enums:["none","like","dislike"]
+    },
     status:{
         type:String,
         required:true,
